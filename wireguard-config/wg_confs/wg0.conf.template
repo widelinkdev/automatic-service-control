@@ -1,0 +1,10 @@
+[Interface]
+PrivateKey = <YOUR_PRIVATE_KEY_HERE>
+Address = <LOCAL_IP_HERE>
+DNS = <DNS_SERVER_HERE>
+
+[Peer]
+PublicKey = <PEER_PUBLIC_KEY_HERE>
+AllowedIPs = <ALLOWED_IPS_HERE>
+Endpoint = <SERVER_IP:PORT_HERE>
+PersistentKeepalive = <KEEPALIVE_HERE>

@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WebhookStatus {
+  WAITING
+  PROCESSING
+  PROCESSED
+  FAILED
+  REJECTED
+}
+
+model PaymentEvent {
+  id        Int           @id @default(autoincrement())
+  source    String
+  payload   Json
+  processed    Boolean  @default(false) // Si ya se procesó en una tarea  
+  createdAt DateTime      @default(now())
+  updateAt  DateTime      @updatedAt
+  status    WebhookStatus @default(WAITING)
+
+  taskLogs  PaymentTaskLog[]
+}
+
+model PaymentTaskLog {
+  id             String   @id @default(cuid())
+  paymentEventId Int
+  paymentEvent   PaymentEvent @relation(fields: [paymentEventId], references: [id])
+  pgmqMessageId  String?
+  status   TaskStatus
+  message  String?              // descripción del resultado o error
+  retries Int @default(0)
+  executedAt DateTime @default(now())
+}
+
+model OLTDevice {
+  id                 Int      @id @default(autoincrement())
+  name               String
+  type               String?
+  location           String?
+  ip                 String   @unique
+  username           String
+  password_encrypted String
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+
+
+enum TaskStatus {
+  PENDING   // creada pero no procesada
+  SUCCESS   // reconexión ejecutada
+  SKIPPED   // no aplica reconexión (ej: ya estaba activo según reglas del negocio)
+  FAILED    // error
+}

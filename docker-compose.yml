@@ -1,0 +1,104 @@
+# version: "3.8"
+services:
+  wireguard:        # WIREGUARD
+    image: linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Bogota
+    volumes:
+      - ./wireguard-config:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - 51820:51820/udp   
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    restart: unless-stopped
+    privileged: true
+    networks:
+      - vpn_net    
+      - default   
+
+  payment-webhook:   # WEBHOOK DE PAGOS
+    build: ./payment-webhook
+    container_name: payment-webhook-api
+    ports:
+      - 3000:3000  # Expuesto públicamente    
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      wireguard:
+        condition: service_started        
+    volumes:
+      - ./payment-webhook:/app      
+      - /app/node_modules
+    environment:
+      - WORKER_ENABLED=false  
+      - DATABASE_URL=postgres://postgres:postgres@postgres-db:5432/widelink
+      - DB_HOST=postgres-db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=widelink   
+      - POSTGRES_PASSWORD=postgres        
+    restart: unless-stopped
+    networks:
+      - default    
+    
+  payment-worker:   # WORKER CON VPN 
+    build: ./payment-webhook
+    container_name: payment-worker
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      wireguard:
+        condition: service_started
+    volumes:
+      - ./payment-webhook:/app
+      - /app/node_modules
+    environment:
+      - WORKER_ENABLED=true
+      - DATABASE_URL=postgres://postgres:postgres@postgres-db:5432/widelink
+      - DB_HOST=postgres-db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=widelink      
+      - POSTGRES_PASSWORD=postgres    
+    restart: unless-stopped    
+    networks:
+      - vpn_net    
+      - default     
+
+  postgres-db:  # POSTGRES CON PGMQ 
+    image: public.ecr.aws/supabase/postgres:17.4.1.074 
+    container_name: postgres-db
+    command: postgres -c listen_addresses='*'
+    restart: unless-stopped
+    ports:
+      - "54322:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s    
+    networks:
+      - default      
+      - vpn_net
+      
+networks:
+  default:
+    name: reconnect-system_default
+  vpn_net:
+    name: reconnect-system_vpn      

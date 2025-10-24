@@ -1,0 +1,38 @@
+[
+  {
+    "name": "OLT TPLINK",
+    "type": "TPLINK",
+    "location": "RIOJA",
+    "ip": "10.40.4.4",
+    "username": "example",
+    "password": "example",
+    "notes": "Atiende: Rioja, Segovia, Cantabria(Parcial), Girona(Parcial)"
+  },
+  {
+    "name": "OLT UBIQUITI",
+    "type": "UF-OLT-4",
+    "location": "",
+    "ip": "10.40.4.5",
+    "username": "example",
+    "password": "example",
+    "notes": "Atiende: Girona y Cantabria."
+  },
+  {
+    "name": "OLT VISOL",
+    "type": "VISOL",
+    "location": "VILLACARMELO",
+    "ip": "10.40.2.5/25",
+    "username": "example",
+    "password": "example",
+    "notes": "VILLACARMELO"
+  },
+  {
+    "name": "OLT UBIQUITI",
+    "type": "UF-OLT-4",
+    "location": "Laguna Seca",
+    "ip": "10.40.3.4",
+    "username": "example",
+    "password": "example",
+    "notes": "Atiende: Laguna Seca"
+  }
+]
