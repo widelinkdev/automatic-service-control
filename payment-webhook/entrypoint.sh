@@ -23,21 +23,40 @@ done
 
 echo "✅ PostgreSQL is ready!"
 
-# Si no es worker, crear DB y extensiones
-if [ "$WORKER_ENABLED" != "true" ]; then
-  echo "Creating database if not exists..."
-  PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -tc \
-    "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || \
-    PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c \
-    "CREATE DATABASE \"$DB_NAME\""
+echo "Creating database if not exists..."
+PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -tc \
+  "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | grep -q 1 || \
+  PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c \
+  "CREATE DATABASE \"$DB_NAME\""
 
-  echo "Creating pgmq extension..."
-  PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c \
-    "CREATE EXTENSION IF NOT EXISTS pgmq CASCADE"
+echo "Creating pgmq extension..."
+PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c \
+  "CREATE EXTENSION IF NOT EXISTS pgmq CASCADE"
 
-  echo "Running Prisma migrations..."
-  npx prisma migrate deploy
-fi
+echo "Creating PGMQ queue..."
+PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c \
+  "SELECT * FROM pgmq.create('${RECONNECTION_PGMQ_QUEUE:-reconnect_queue}'::text);"
+
+echo "Creating PGMQ LISTEN/NOTIFY trigger..."
+PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<-EOSQL
+  DROP TRIGGER IF EXISTS pgmq_enqueue_trigger ON pgmq.q_${RECONNECTION_PGMQ_QUEUE:-reconnect_queue};
+  
+  CREATE OR REPLACE FUNCTION notify_pgmq_enqueue()
+  RETURNS TRIGGER AS \$\$
+  BEGIN
+    PERFORM pg_notify('pgmq_new_message', TG_TABLE_NAME::text);
+    RETURN NEW;
+  END;
+  \$\$ LANGUAGE plpgsql;
+  
+  CREATE TRIGGER pgmq_enqueue_trigger
+  AFTER INSERT ON pgmq.q_${RECONNECTION_PGMQ_QUEUE:-reconnect_queue}
+  FOR EACH ROW EXECUTE FUNCTION notify_pgmq_enqueue();
+EOSQL
+
+echo "Running Prisma migrations..."
+npx prisma migrate deploy
+
 
 if [ ! -f ".env" ] && [ -f ".env.template" ]; then
     echo "🆕 Creating .env from .env.template"
@@ -53,11 +72,5 @@ fi
 echo "🚀 Running insert_olts.ts script..."
 npx tsx src/lib/insert_olts.ts
 
-# ✅ Iniciar la aplicación (worker o webhook). Se usa el mismo proyecto sin duplicar.
-if [ "$WORKER_ENABLED" = "true" ]; then
-  echo "🚀 Starting Worker..."
-  exec npx tsx src/lib/worker.ts
-else
-  echo "🚀 Starting Webhook API..."
-  exec "$@"
-fi
+echo "🚀 Starting Webhook API..."
+exec "$@" 

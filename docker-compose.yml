@@ -36,42 +36,45 @@ services:
         condition: service_started        
     volumes:
       - ./payment-webhook:/app      
-      - /app/node_modules
+      - /app/node_modules 
+      - shared-logs:/app/logs
     environment:
-      - WORKER_ENABLED=false  
       - DATABASE_URL=postgres://postgres:postgres@postgres-db:5432/widelink
       - DB_HOST=postgres-db
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=widelink   
-      - POSTGRES_PASSWORD=postgres        
+      - POSTGRES_PASSWORD=postgres  
+      - OLT_ENCRYPTION_KEY=81da36a013cfa37306c18c61f05d208a6a3247e52c6572908840ba3a3d72de97
     restart: unless-stopped
     networks:
       - default    
     
   payment-worker:   # WORKER CON VPN 
-    build: ./payment-webhook
+    build: ./payment-worker
     container_name: payment-worker
+    cap_add:
+      - NET_ADMIN    
     depends_on:
       postgres-db:
         condition: service_healthy
       wireguard:
         condition: service_started
     volumes:
-      - ./payment-webhook:/app
+      - ./payment-worker:/app
       - /app/node_modules
+      - shared-logs:/app/logs
     environment:
-      - WORKER_ENABLED=true
-      - DATABASE_URL=postgres://postgres:postgres@postgres-db:5432/widelink
-      - DB_HOST=postgres-db
+      - DATABASE_URL=postgres://postgres:postgres@172.20.0.1:54325/widelink
+      - DB_HOST=172.20.0.1
+      - DB_PORT=54325
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=widelink      
       - POSTGRES_PASSWORD=postgres    
+      - OLT_ENCRYPTION_KEY=81da36a013cfa37306c18c61f05d208a6a3247e52c6572908840ba3a3d72de97      
     restart: unless-stopped    
-    networks:
-      - vpn_net    
-      - default     
+    network_mode: "service:wireguard"
 
   postgres-db:  # POSTGRES CON PGMQ 
     image: public.ecr.aws/supabase/postgres:17.4.1.074 
@@ -83,7 +86,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_DB: widelink
       PGDATA: /var/lib/postgresql/data
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
@@ -101,4 +104,7 @@ networks:
   default:
     name: reconnect-system_default
   vpn_net:
-    name: reconnect-system_vpn      
+    name: reconnect-system_vpn
+    
+volumes:  
+  shared-logs: {}    
