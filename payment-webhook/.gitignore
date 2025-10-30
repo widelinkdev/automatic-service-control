@@ -21,7 +21,6 @@ build/
 # Database
 *.db
 *.sqlite
-/prisma/migrations/
 
 # IDE
 .idea/
