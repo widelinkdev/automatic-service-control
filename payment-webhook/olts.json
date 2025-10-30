@@ -4,8 +4,8 @@
     "type": "TPLINK",
     "location": "RIOJA",
     "ip": "10.40.4.4",
-    "username": "admin",
-    "password": "victor2030*",
+    "username": "your username",
+    "password": "your password",
     "notes": "Atiende: Rioja, Segovia, Cantabria(Parcial), Girona(Parcial)"
   },
   {
@@ -13,8 +13,8 @@
     "type": "UF-OLT-4",
     "location": "",
     "ip": "10.40.4.5",
-    "username": "ubnt",
-    "password": "victor2030",
+    "username": "your username",
+    "password": "your password",
     "notes": "Atiende: Girona y Cantabria."
   },
   {
@@ -22,8 +22,8 @@
     "type": "VISOL",
     "location": "VILLACARMELO",
     "ip": "10.40.2.5/25",
-    "username": "admin",
-    "password": "victor2030",
+    "username": "your username",
+    "password": "your password",
     "notes": "VILLACARMELO"
   },
   {
@@ -31,8 +31,8 @@
     "type": "UF-OLT-4",
     "location": "Laguna Seca",
     "ip": "10.40.3.4",
-    "username": "ubnt",
-    "password": "victor2030",
+    "username": "your username",
+    "password": "your password",
     "notes": "Atiende: Laguna Seca"
   }
 ]
