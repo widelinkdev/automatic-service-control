@@ -23,6 +23,8 @@ services:
     networks:
       - vpn_net    
       - default   
+    extra_hosts:
+        - "dbservice:172.18.0.10"      
 
   payment-webhook:   # WEBHOOK DE PAGOS
     build: ./payment-webhook
@@ -65,16 +67,16 @@ services:
       - /app/node_modules
       - shared-logs:/app/logs
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@172.20.0.1:54322/widelink
-      - DB_HOST=172.20.0.1
-      - DB_PORT=54322
+      - DATABASE_URL=postgres://postgres:postgres@dbservice:5432/widelink
+      - DB_HOST=dbservice
+      - DB_PORT=5432
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=widelink      
       - POSTGRES_PASSWORD=postgres    
       - OLT_ENCRYPTION_KEY=81da36a013cfa37306c18c61f05d208a6a3247e52c6572908840ba3a3d72de97      
     restart: unless-stopped    
-    network_mode: "service:wireguard"
+    network_mode: "service:wireguard" 
 
   postgres-db:  # POSTGRES CON PGMQ 
     image: public.ecr.aws/supabase/postgres:17.4.1.074 
@@ -97,12 +99,17 @@ services:
       retries: 5
       start_period: 10s    
     networks:
-      - default      
-      - vpn_net
+      default:
+        ipv4_address: 172.18.0.10
+      vpn_net:
       
 networks:
   default:
     name: reconnect-system_default
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1    
   vpn_net:
     name: reconnect-system_vpn
     
